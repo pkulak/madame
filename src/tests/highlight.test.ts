@@ -45,4 +45,51 @@ describe("renderHighlight", () => {
   it("does not treat # without trailing space as a heading", () => {
     expect(renderHighlight("#nope")).toBe("#nope");
   });
+
+  it("highlights inline code", () => {
+    const out = renderHighlight("foo `bar` baz");
+    expect(out).toContain('<span class="tok-code">');
+    expect(out).toContain('<span class="tok-markup">`</span>bar<span class="tok-markup">`</span>');
+  });
+
+  it("escapes HTML inside inline code", () => {
+    expect(renderHighlight("`<script>`")).toContain("&lt;script&gt;");
+  });
+
+  it("highlights strong with **", () => {
+    const out = renderHighlight("**bold**");
+    expect(out).toContain('<span class="tok-strong">');
+    expect(out).toContain('<span class="tok-markup">**</span>bold<span class="tok-markup">**</span>');
+  });
+
+  it("highlights em with single *", () => {
+    const out = renderHighlight("*italic*");
+    expect(out).toContain('<span class="tok-em">');
+    expect(out).toContain('<span class="tok-markup">*</span>italic<span class="tok-markup">*</span>');
+  });
+
+  it("prefers strong over em for **", () => {
+    const out = renderHighlight("**bold**");
+    expect(out).toContain('tok-strong');
+    expect(out).not.toContain('tok-em');
+  });
+
+  it("highlights links with [text](url)", () => {
+    const out = renderHighlight("see [docs](https://example.com) here");
+    expect(out).toContain('<span class="tok-link-text">docs</span>');
+    expect(out).toContain('<span class="tok-link-url">https://example.com</span>');
+    expect(out).toContain('<span class="tok-markup">[</span>');
+    expect(out).toContain('<span class="tok-markup">](</span>');
+    expect(out).toContain('<span class="tok-markup">)</span>');
+  });
+
+  it("leaves unclosed inline code as plain text", () => {
+    expect(renderHighlight("`unclosed")).toBe("`unclosed");
+  });
+
+  it("combines inline tokens within a heading", () => {
+    const out = renderHighlight("# Hello **world**");
+    expect(out).toContain('tok-heading');
+    expect(out).toContain('tok-strong');
+  });
 });
