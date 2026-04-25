@@ -11,6 +11,7 @@ pub struct EditorConfig {
     pub word_wrap: bool,
     pub font_family: Option<String>,
     pub font_size: u32,
+    pub syntax_highlighting: bool,
 }
 
 impl Default for EditorConfig {
@@ -21,6 +22,7 @@ impl Default for EditorConfig {
             word_wrap: true,
             font_family: None,
             font_size: 14,
+            syntax_highlighting: true,
         }
     }
 }
@@ -170,5 +172,23 @@ mod tests {
         assert_eq!(cfg.editor.font_size, 16);
         assert_eq!(cfg.editor.tab_size, 2);
         assert_eq!(cfg.preview.debounce_ms, 100);
+    }
+
+    #[test]
+    fn syntax_highlighting_defaults_to_true() {
+        let cfg = EditorConfig::default();
+        assert!(cfg.syntax_highlighting);
+    }
+
+    #[test]
+    fn syntax_highlighting_loads_from_yaml() {
+        let tmp = NamedTempFile::new().unwrap();
+        std::fs::write(
+            tmp.path(),
+            "editor:\n  syntax_highlighting: false\n",
+        )
+        .unwrap();
+        let cfg = load_or_default(tmp.path()).unwrap();
+        assert!(!cfg.editor.syntax_highlighting);
     }
 }
