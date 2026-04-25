@@ -27,7 +27,10 @@
       </div>
       <div class="panes" id="panes">
         <div class="pane editor-pane" id="editor-pane">
-          <textarea id="editor" spellcheck="false" class="wrap"></textarea>
+          <div class="editor-stack">
+            <pre class="editor-highlight wrap" id="editor-highlight" aria-hidden="true"></pre>
+            <textarea id="editor" spellcheck="false" class="wrap"></textarea>
+          </div>
         </div>
         <div class="splitter" id="splitter"></div>
         <div class="pane preview-pane" id="preview-pane">
