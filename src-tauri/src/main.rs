@@ -27,7 +27,6 @@ fn main() {
             let app_state = state::load_or_default(&state_path);
 
             app.manage(commands::AppCtx {
-                config_path,
                 state_path,
                 config: Mutex::new(config),
                 state: Mutex::new(app_state),

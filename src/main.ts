@@ -1,9 +1,22 @@
 import "./styles/github.css";
 import "./styles/app.css";
-import "highlight.js/styles/github.css";
+import githubLightCss from "highlight.js/styles/github.css?inline";
+import githubDarkCss from "highlight.js/styles/github-dark.css?inline";
+
+// Inject both highlight.js themes with media queries so the browser swaps
+// them automatically when the system color scheme changes.
+function injectThemedStyle(css: string, media: string): void {
+  const el = document.createElement("style");
+  el.media = media;
+  el.textContent = css;
+  document.head.appendChild(el);
+}
+injectThemedStyle(githubLightCss, "(prefers-color-scheme: light)");
+injectThemedStyle(githubDarkCss, "(prefers-color-scheme: dark)");
 
 import { open as dialogOpen, save as dialogSave, message as dialogMessage } from "@tauri-apps/plugin-dialog";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { homeDir } from "@tauri-apps/api/path";
 
 import { createEditor } from "./editor";
 import { createPreview } from "./preview";
@@ -172,6 +185,11 @@ async function boot() {
   }
 
   editor.applyConfig(config.editor);
+  try {
+    titlebar.setHomeDir(await homeDir());
+  } catch (err) {
+    console.warn("[madame] could not resolve home dir:", err);
+  }
   titlebar.setFilename("");
 
   // Pane order (editor on left or right based on config)

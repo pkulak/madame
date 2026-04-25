@@ -4,6 +4,7 @@ import type { Options } from "markdown-it/lib/index.mjs";
 import taskLists from "markdown-it-task-lists";
 import anchor from "markdown-it-anchor";
 import hljs from "highlight.js";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 export interface Preview {
   render(md: string, baseDir?: string): void;
@@ -51,13 +52,23 @@ export function createPreview(el: HTMLElement): Preview {
   let baseDirCache: string | undefined;
 
   function resolveImagePaths(): void {
-    if (!baseDirCache) return;
     const imgs = el.querySelectorAll("img");
     imgs.forEach((img) => {
       const src = img.getAttribute("src") ?? "";
-      if (/^(https?:|data:|\/|[a-zA-Z]:[\\/])/.test(src)) return;
-      const sep = baseDirCache!.endsWith("/") || baseDirCache!.endsWith("\\") ? "" : "/";
-      img.setAttribute("src", `${baseDirCache}${sep}${src}`);
+      if (!src) return;
+      // Skip URLs the webview already understands.
+      if (/^(https?:|data:|blob:|asset:|tauri:)/.test(src)) return;
+
+      let absolute: string | null = null;
+      if (/^\/|^[a-zA-Z]:[\\/]/.test(src)) {
+        absolute = src;
+      } else if (baseDirCache) {
+        const sep = baseDirCache.endsWith("/") || baseDirCache.endsWith("\\") ? "" : "/";
+        absolute = `${baseDirCache}${sep}${src}`;
+      }
+      if (absolute) {
+        img.setAttribute("src", convertFileSrc(absolute));
+      }
     });
   }
 

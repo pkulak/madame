@@ -8,7 +8,6 @@ use crate::state::{self, AppState};
 use crate::watcher::FileWatcher;
 
 pub struct AppCtx {
-    pub config_path: PathBuf,
     pub state_path: PathBuf,
     pub config: Mutex<Config>,
     pub state: Mutex<AppState>,

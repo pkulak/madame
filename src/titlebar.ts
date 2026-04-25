@@ -3,6 +3,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 export interface Titlebar {
   setFilename(name: string): void;
   setDirty(dirty: boolean): void;
+  setHomeDir(dir: string): void;
 }
 
 export function createTitlebar(el: HTMLElement): Titlebar {
@@ -16,18 +17,35 @@ export function createTitlebar(el: HTMLElement): Titlebar {
   maxBtn.addEventListener("click", () => win.toggleMaximize());
   closeBtn.addEventListener("click", () => win.close());
 
-  function basename(p: string): string {
-    const parts = p.split(/[\\/]/);
-    return parts[parts.length - 1] || p;
+  let homeDir: string | null = null;
+
+  function tildify(p: string): string {
+    if (!homeDir) return p;
+    const norm = p.replace(/\\/g, "/");
+    const home = homeDir.replace(/\\/g, "/").replace(/\/$/, "");
+    if (norm === home) return "~";
+    if (norm.startsWith(home + "/")) return "~" + norm.slice(home.length);
+    return p;
   }
 
   return {
     setFilename(name) {
-      filenameEl.textContent = name === "" ? "Untitled" : basename(name);
-      filenameEl.title = name;
+      if (name === "") {
+        filenameEl.textContent = "Untitled";
+        filenameEl.title = "";
+      } else {
+        filenameEl.textContent = tildify(name);
+        filenameEl.title = name;
+      }
     },
     setDirty(dirty) {
       el.classList.toggle("dirty", dirty);
+    },
+    setHomeDir(dir) {
+      homeDir = dir;
+      // Re-render current filename if one is already set.
+      const current = filenameEl.title;
+      if (current) filenameEl.textContent = tildify(current);
     },
   };
 }

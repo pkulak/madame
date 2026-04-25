@@ -4,7 +4,8 @@
     "windows": [
       {
         "decorations": true,
-        "titleBarStyle": "Overlay"
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ]
   },

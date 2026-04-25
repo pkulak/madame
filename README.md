@@ -129,13 +129,23 @@ On first run, `madame_config.yaml` and `editor_state.json` are created next to t
 
 ### Regenerate app icons
 
-If you change `src/public/madame_logo.png`:
+Two source images live under `src/public/`:
+
+- `madame_logo.png` — transparent silhouette + M; used in-app for the titlebar (rendered inverted on the dark titlebar).
+- `madame_icon.png` — rounded-square white background with the logo composited on top; used as the source for all platform icons (Windows `.ico`, macOS `.icns`, Linux `.png`). Matches the macOS dock icon convention.
+
+If you change either, regenerate the icon set:
 
 ```bash
-bun run tauri icon src/public/madame_logo.png
+bun run tauri icon src/public/madame_icon.png
 ```
 
-This refreshes the full icon set under `src-tauri/icons/`.
+This refreshes everything under `src-tauri/icons/`. Tauri also emits Android/iOS and Microsoft Store assets — delete those if you don't ship to those platforms (we don't):
+
+```bash
+rm -rf src-tauri/icons/android src-tauri/icons/ios
+rm -f src-tauri/icons/Square*Logo.png src-tauri/icons/StoreLogo.png
+```
 
 ## Configuration
 

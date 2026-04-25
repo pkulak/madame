@@ -53,7 +53,13 @@ body {
   user-select: none;
   flex: 0 0 auto;
 }
-.titlebar .filename { flex: 1; }
+.titlebar .filename {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .titlebar .app-icon {
   width: 18px;
   height: 18px;

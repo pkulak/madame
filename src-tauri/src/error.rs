@@ -17,17 +17,8 @@ pub enum AppError {
     #[error("File not found: {0}")]
     NotFound(String),
 
-    #[error("Permission denied: {0}")]
-    PermissionDenied(String),
-
-    #[error("Dialog cancelled")]
-    DialogCancelled,
-
     #[error("Watcher error: {0}")]
     Watcher(String),
-
-    #[error("{0}")]
-    Other(String),
 }
 
 impl Serialize for AppError {
