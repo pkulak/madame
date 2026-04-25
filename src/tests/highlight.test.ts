@@ -126,4 +126,40 @@ describe("renderHighlight", () => {
     expect(out).toContain('tok-quote');
     expect(out).toContain('tok-em');
   });
+
+  it("wraps fence delimiter lines in tok-codeblock + tok-markup", () => {
+    const out = renderHighlight("```\ncode\n```");
+    const lines = out.split("\n");
+    expect(lines[0]).toBe('<span class="tok-codeblock"><span class="tok-markup">```</span></span>');
+    expect(lines[2]).toBe('<span class="tok-codeblock"><span class="tok-markup">```</span></span>');
+  });
+
+  it("treats lines inside a fence as tok-codeblock with no inline parsing", () => {
+    const out = renderHighlight("```\n**not bold**\n```");
+    const lines = out.split("\n");
+    expect(lines[1]).toBe('<span class="tok-codeblock">**not bold**</span>');
+  });
+
+  it("supports a language tag on the opening fence", () => {
+    const out = renderHighlight("```js\nx\n```");
+    const lines = out.split("\n");
+    expect(lines[0]).toContain('tok-codeblock');
+    expect(lines[0]).toContain('```js');
+  });
+
+  it("preserves leading whitespace on a fence line (alignment with textarea)", () => {
+    const out = renderHighlight("  ```\n  code\n  ```");
+    const lines = out.split("\n");
+    expect(lines[0]).toBe('<span class="tok-codeblock"><span class="tok-markup">  ```</span></span>');
+  });
+
+  it("escapes HTML inside fenced code", () => {
+    const out = renderHighlight("```\n<div>\n```");
+    expect(out).toContain('&lt;div&gt;');
+  });
+
+  it("returns to normal parsing after the closing fence", () => {
+    const out = renderHighlight("```\ncode\n```\n# After");
+    expect(out).toContain('tok-heading');
+  });
 });

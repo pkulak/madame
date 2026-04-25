@@ -5,6 +5,8 @@ const ESCAPES: Record<string, string> = {
   '"': "&quot;",
 };
 
+const FENCE_RE = /^\s*```[\w-]*\s*$/;
+
 function escape(s: string): string {
   return s.replace(/[&<>"]/g, (c) => ESCAPES[c]);
 }
@@ -111,7 +113,17 @@ export function renderHighlight(source: string): string {
   if (source === "") return "";
   const lines = source.split("\n");
   const out: string[] = [];
+  let inFence = false;
   for (const line of lines) {
+    if (FENCE_RE.test(line)) {
+      out.push(`<span class="tok-codeblock"><span class="tok-markup">${escape(line)}</span></span>`);
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) {
+      out.push(`<span class="tok-codeblock">${escape(line)}</span>`);
+      continue;
+    }
     out.push(renderBlock(line));
   }
   let html = out.join("\n");
