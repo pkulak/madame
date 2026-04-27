@@ -1,1 +1,0 @@
-If rebuilding the icon set, make sure to delete the android/ios/MS Store cruft
