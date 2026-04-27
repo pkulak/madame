@@ -13,6 +13,13 @@ use tauri::Manager;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use tauri::Emitter;
 
+// On macOS, `application:openURLs:` fires BEFORE `applicationDidFinishLaunching:`
+// when the app is cold-launched as a file's default editor, which means
+// RunEvent::Opened arrives before our setup() has managed AppCtx. Buffer those
+// early paths here so setup() can drain them.
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+static EARLY_OPENED: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+
 fn main() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -32,10 +39,14 @@ fn main() {
 
             // On Windows/Linux, file associations launch the binary with the
             // path as argv. macOS delivers it via RunEvent::Opened instead.
-            let argv_path: Option<PathBuf> = std::env::args()
+            let mut pending: Vec<PathBuf> = std::env::args()
                 .skip(1)
-                .find(|a| !a.starts_with("--"))
-                .map(PathBuf::from);
+                .filter(|a| !a.starts_with("--"))
+                .map(PathBuf::from)
+                .collect();
+
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            pending.extend(std::mem::take(&mut *EARLY_OPENED.lock().unwrap()));
 
             app.manage(commands::AppCtx {
                 state_path,
@@ -43,7 +54,7 @@ fn main() {
                 state: Mutex::new(app_state),
                 watcher: Mutex::new(watcher::FileWatcher::new()),
                 open_queue: Mutex::new(commands::OpenQueue {
-                    pending: argv_path.into_iter().collect(),
+                    pending,
                     frontend_ready: false,
                 }),
             });
@@ -66,20 +77,29 @@ fn main() {
 
     app.run(|_app_handle, _event| {
         // macOS/iOS deliver file-association opens (initial launch and while
-        // running) as RunEvent::Opened. If the frontend isn't ready yet, queue
-        // the path; otherwise emit an event the registered listener will catch.
+        // running) as RunEvent::Opened. On cold launch this can fire BEFORE
+        // setup() runs, so AppCtx may not yet be managed — fall back to the
+        // EARLY_OPENED static in that case.
         #[cfg(any(target_os = "macos", target_os = "ios"))]
         if let tauri::RunEvent::Opened { urls } = _event {
-            let ctx = _app_handle.state::<commands::AppCtx>();
-            for url in &urls {
-                let Ok(path) = url.to_file_path() else { continue };
-                let mut q = ctx.open_queue.lock().unwrap();
-                if q.frontend_ready {
-                    drop(q);
-                    let _ = _app_handle
-                        .emit("cli-open-path", path.to_string_lossy().to_string());
-                } else {
-                    q.pending.push(path);
+            let paths: Vec<PathBuf> =
+                urls.iter().filter_map(|u| u.to_file_path().ok()).collect();
+
+            match _app_handle.try_state::<commands::AppCtx>() {
+                Some(ctx) => {
+                    let mut q = ctx.open_queue.lock().unwrap();
+                    if q.frontend_ready {
+                        drop(q);
+                        for p in paths {
+                            let _ = _app_handle
+                                .emit("cli-open-path", p.to_string_lossy().to_string());
+                        }
+                    } else {
+                        q.pending.extend(paths);
+                    }
+                }
+                None => {
+                    EARLY_OPENED.lock().unwrap().extend(paths);
                 }
             }
         }
