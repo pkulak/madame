@@ -154,3 +154,24 @@ jobs:
           name: macos
           path: src-tauri/target/release/bundle/macos/madame-${{ env.VERSION }}-aarch64-darwin.zip
           if-no-files-found: error
+
+  release:
+    needs: [validate-version, build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            artifacts/*
