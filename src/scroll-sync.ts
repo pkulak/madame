@@ -31,9 +31,11 @@ export function createScrollSync(editor: Editor, preview: Preview): ScrollSync {
   editor.onCursorMove((line) => {
     if (!enabled) return;
     if (now() < suppressUntil) return;
-    if (preview.isSourceLineVisible(line)) return;
     suppressUntil = now() + suppressMs;
-    preview.scrollToSourceLine(line);
+    // Place the line's heading in the preview at the same Y as the cursor
+    // sits in the editor. The browser clamps scrollTop at the top/bottom
+    // of the file, which gives the right behavior near the document edges.
+    preview.scrollToSourceLine(line, editor.getCursorY());
   });
 
   // After each edit, the preview re-renders (debounced ~100ms). When its

@@ -10,6 +10,7 @@ export interface Editor {
   getVisibleTopLine(): number;
   scrollToLine(line: number): void;
   getCursorLine(): number;
+  getCursorY(): number;
   onCursorMove(cb: (line: number) => void): void;
 }
 
@@ -91,6 +92,51 @@ export function createEditor(el: HTMLTextAreaElement, highlight: HTMLElement): E
     },
     getElement: () => el,
     getVisibleTopLine() {
+      // Walk highlight's text nodes and use Range to find which source line
+      // is at the top of the editor's viewport. Wrap-aware: a single source
+      // line may span multiple visual lines, so scrollTop / lineHeight gives
+      // a visual-line index, not a source-line index.
+      if (highlight.firstChild) {
+        const editorTop = el.getBoundingClientRect().top;
+        const cs = getComputedStyle(el);
+        const paddingTop = parseFloat(cs.paddingTop) || 0;
+        const target = el.scrollTop;
+        let prevLine = 0;
+        let prevY = 0;
+        let line = 0;
+        let foundAny = false;
+        const walker = document.createTreeWalker(highlight, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode() as Text | null;
+        while (node) {
+          const text = node.nodeValue ?? "";
+          for (let i = 0; i < text.length; i++) {
+            if (text.charCodeAt(i) === 10) {
+              const range = document.createRange();
+              range.setStart(node, i + 1);
+              range.setEnd(node, i + 1);
+              const rect = range.getBoundingClientRect();
+              if (rect.top === 0 && rect.bottom === 0 && rect.left === 0 && rect.right === 0) {
+                line++;
+                continue;
+              }
+              foundAny = true;
+              const y = rect.top - editorTop - paddingTop + el.scrollTop;
+              line++;
+              if (y > target) {
+                const span = y - prevY;
+                if (span <= 0) return prevLine;
+                const frac = (target - prevY) / span;
+                return prevLine + frac * (line - prevLine);
+              }
+              prevLine = line;
+              prevY = y;
+            }
+          }
+          node = walker.nextNode() as Text | null;
+        }
+        if (foundAny) return prevLine;
+      }
+      // Fallback (highlight disabled / not yet rendered / jsdom): no wrap.
       const lineHeight = parseFloat(getComputedStyle(el).lineHeight) || 20;
       return el.scrollTop / lineHeight;
     },
@@ -105,6 +151,53 @@ export function createEditor(el: HTMLTextAreaElement, highlight: HTMLElement): E
         if (before.charCodeAt(i) === 10) line++;
       }
       return line;
+    },
+    getCursorY() {
+      // Walk highlight's text nodes to find the cursor's character and use
+      // a Range to measure its real visual Y. This is wrap-aware: with word
+      // wrap enabled, source line N may render across multiple visual lines,
+      // so line * lineHeight is not the cursor's real position.
+      const target = el.selectionStart;
+      if (highlight.firstChild) {
+        let acc = 0;
+        const walker = document.createTreeWalker(highlight, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode() as Text | null;
+        while (node) {
+          const text = node.nodeValue ?? "";
+          const len = text.length;
+          if (acc + len >= target) {
+            const offset = target - acc;
+            const range = document.createRange();
+            range.setStart(node, offset);
+            range.setEnd(node, offset);
+            const rect = range.getBoundingClientRect();
+            if (rect.top !== 0 || rect.bottom !== 0 || rect.left !== 0 || rect.right !== 0) {
+              return rect.top - el.getBoundingClientRect().top;
+            }
+            // Range can return an empty rect at end-of-line; back up one char.
+            if (offset > 0) {
+              range.setStart(node, offset - 1);
+              range.setEnd(node, offset);
+              const rect2 = range.getBoundingClientRect();
+              if (rect2.top !== 0 || rect2.bottom !== 0) {
+                return rect2.top - el.getBoundingClientRect().top;
+              }
+            }
+            break;
+          }
+          acc += len;
+          node = walker.nextNode() as Text | null;
+        }
+      }
+      // Fallback (highlight disabled / not yet rendered / jsdom): assume no wrap.
+      const cs = getComputedStyle(el);
+      const lineHeight = parseFloat(cs.lineHeight) || 20;
+      const paddingTop = parseFloat(cs.paddingTop) || 0;
+      let line = 0;
+      for (let i = 0; i < target; i++) {
+        if (el.value.charCodeAt(i) === 10) line++;
+      }
+      return paddingTop + line * lineHeight - el.scrollTop;
     },
     onCursorMove(cb) {
       const handler = () => {

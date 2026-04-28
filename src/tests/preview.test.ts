@@ -50,4 +50,138 @@ describe("preview", () => {
     const withLines = container.querySelectorAll("[data-source-line]");
     expect(withLines.length).toBeGreaterThan(0);
   });
+
+  describe("scroll math", () => {
+    function rect(top: number, height = 30): DOMRect {
+      return {
+        top, bottom: top + height, left: 0, right: 800,
+        width: 800, height, x: 0, y: top,
+        toJSON() { return this; },
+      } as DOMRect;
+    }
+
+    function setupScroller(scrollerTop: number, scrollTop: number) {
+      const scroller = document.createElement("div");
+      const content = document.createElement("div");
+      scroller.appendChild(content);
+      document.body.appendChild(scroller);
+      Object.defineProperty(scroller, "getBoundingClientRect", {
+        configurable: true,
+        value: () => rect(scrollerTop, 550),
+      });
+      Object.defineProperty(scroller, "scrollTop", {
+        configurable: true, writable: true, value: scrollTop,
+      });
+      Object.defineProperty(scroller, "clientHeight", {
+        configurable: true, value: 550,
+      });
+      return { scroller, content };
+    }
+
+    it("scrollToSourceLine uses scroller-relative positions, not body-relative", () => {
+      // Scroller starts at body Y=50 (e.g., titlebar 30 + pane padding 20).
+      const { scroller, content } = setupScroller(50, 0);
+      const p = createPreview(content);
+      p.render("# H1\n\n## H2");
+
+      const nodes = content.querySelectorAll<HTMLElement>("[data-source-line]");
+      // H1 at body Y=70, H2 at body Y=200 (scroller-relative: 20 and 150).
+      Object.defineProperty(nodes[0], "getBoundingClientRect", {
+        configurable: true, value: () => rect(70),
+      });
+      Object.defineProperty(nodes[1], "getBoundingClientRect", {
+        configurable: true, value: () => rect(200),
+      });
+
+      const h2Line = Number(nodes[1].getAttribute("data-source-line"));
+      p.scrollToSourceLine(h2Line);
+
+      // H2 should land at top of scroller viewport: scrollTop = 200 - 50 = 150.
+      // (NOT 200, which would be body-relative offsetTop.)
+      expect(scroller.scrollTop).toBe(150);
+    });
+
+    it("scrollToSourceLine(0) anchors preview to scrollTop 0 (top of file)", () => {
+      const { scroller, content } = setupScroller(50, 100);
+      const p = createPreview(content);
+      p.render("# H1\n\n## H2");
+
+      const nodes = content.querySelectorAll<HTMLElement>("[data-source-line]");
+      // First node has padding above it (scroller-relative pos = 20).
+      Object.defineProperty(nodes[0], "getBoundingClientRect", {
+        configurable: true, value: () => rect(70),
+      });
+      Object.defineProperty(nodes[0], "offsetTop", { configurable: true, value: 70 });
+      Object.defineProperty(nodes[1], "getBoundingClientRect", {
+        configurable: true, value: () => rect(200),
+      });
+      Object.defineProperty(nodes[1], "offsetTop", { configurable: true, value: 200 });
+
+      p.scrollToSourceLine(0);
+
+      // Line 0 should anchor to scrollTop=0 even when first block is below padding.
+      expect(scroller.scrollTop).toBe(0);
+    });
+
+    it("getFirstVisibleSourceLine uses scroller-relative positions", () => {
+      // Scrolled so H2 is exactly at top of viewport.
+      const { scroller: _scroller, content } = setupScroller(50, 150);
+      const p = createPreview(content);
+      p.render("# H1\n\n## H2");
+
+      const nodes = content.querySelectorAll<HTMLElement>("[data-source-line]");
+      // H1 was at body Y=70, now scrolled off (scroller-relative pos still 20).
+      Object.defineProperty(nodes[0], "getBoundingClientRect", {
+        configurable: true, value: () => rect(70 - 150),
+      });
+      Object.defineProperty(nodes[0], "offsetTop", { configurable: true, value: 70 });
+      // H2 was at body Y=200, now at viewport top of scroller (rect.top = 50).
+      Object.defineProperty(nodes[1], "getBoundingClientRect", {
+        configurable: true, value: () => rect(50),
+      });
+      Object.defineProperty(nodes[1], "offsetTop", { configurable: true, value: 200 });
+
+      const h2Line = Number(nodes[1].getAttribute("data-source-line"));
+      expect(p.getFirstVisibleSourceLine()).toBe(h2Line);
+    });
+
+    it("scrollToSourceLine with offsetFromTop places the line at that Y in viewport", () => {
+      const { scroller, content } = setupScroller(50, 0);
+      const p = createPreview(content);
+      p.render("# H1\n\n## H2");
+
+      const nodes = content.querySelectorAll<HTMLElement>("[data-source-line]");
+      // H1 at body Y=70 (scroller-rel pos 20)
+      Object.defineProperty(nodes[0], "getBoundingClientRect", {
+        configurable: true, value: () => rect(70),
+      });
+      // H2 at body Y=200 (scroller-rel pos 150)
+      Object.defineProperty(nodes[1], "getBoundingClientRect", {
+        configurable: true, value: () => rect(200),
+      });
+
+      const h2Line = Number(nodes[1].getAttribute("data-source-line"));
+      // Place H2 at Y=100 in preview viewport.
+      p.scrollToSourceLine(h2Line, 100);
+
+      // H2 pos = 150, want it at Y=100 → scrollTop = 150 - 100 = 50.
+      expect(scroller.scrollTop).toBe(50);
+    });
+
+    it("getFirstVisibleSourceLine returns 0 when scroller is at top", () => {
+      const { scroller: _scroller, content } = setupScroller(50, 0);
+      const p = createPreview(content);
+      p.render("# H1\n\n## H2");
+
+      const nodes = content.querySelectorAll<HTMLElement>("[data-source-line]");
+      Object.defineProperty(nodes[0], "getBoundingClientRect", {
+        configurable: true, value: () => rect(70),
+      });
+      Object.defineProperty(nodes[1], "getBoundingClientRect", {
+        configurable: true, value: () => rect(200),
+      });
+
+      expect(p.getFirstVisibleSourceLine()).toBe(0);
+    });
+  });
 });

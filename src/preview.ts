@@ -11,7 +11,7 @@ export interface Preview {
   getElement(): HTMLElement;
   getScroller(): HTMLElement;
   getFirstVisibleSourceLine(): number;
-  scrollToSourceLine(line: number): void;
+  scrollToSourceLine(line: number, offsetFromTop?: number): void;
   isSourceLineVisible(line: number): boolean;
 }
 
@@ -45,6 +45,10 @@ function createMdInstance(): MarkdownIt {
     return originalRender(tokens, idx, options);
   };
   return md;
+}
+
+function nodePos(node: HTMLElement, scroller: HTMLElement): number {
+  return node.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
 }
 
 export function createPreview(el: HTMLElement): Preview {
@@ -93,40 +97,45 @@ export function createPreview(el: HTMLElement): Preview {
     getFirstVisibleSourceLine(): number {
       const scroller = el.parentElement ?? el;
       const top = scroller.scrollTop;
+      if (top <= 0) return 0;
       const nodes = el.querySelectorAll<HTMLElement>("[data-source-line]");
-      let prev: HTMLElement | null = null;
+      let prevPos = 0;
+      let prevLine = 0;
       for (const n of Array.from(nodes)) {
-        if (n.offsetTop > top) {
-          const nextLine = Number(n.getAttribute("data-source-line") ?? "0");
-          if (!prev) return nextLine;
-          const prevLine = Number(prev.getAttribute("data-source-line") ?? "0");
-          const span = n.offsetTop - prev.offsetTop;
+        const pos = nodePos(n, scroller);
+        const l = Number(n.getAttribute("data-source-line") ?? "0");
+        if (pos > top) {
+          const span = pos - prevPos;
           if (span <= 0) return prevLine;
-          const frac = (top - prev.offsetTop) / span;
-          return prevLine + frac * (nextLine - prevLine);
+          const frac = (top - prevPos) / span;
+          return prevLine + frac * (l - prevLine);
         }
-        prev = n;
+        prevPos = pos;
+        prevLine = l;
       }
-      return prev ? Number(prev.getAttribute("data-source-line") ?? "0") : 0;
+      return prevLine;
     },
-    scrollToSourceLine(line: number): void {
+    scrollToSourceLine(line: number, offsetFromTop = 0): void {
       const scroller = el.parentElement ?? el;
+      if (line <= 0) { scroller.scrollTop = 0; return; }
       const nodes = el.querySelectorAll<HTMLElement>("[data-source-line]");
-      let prev: HTMLElement | null = null;
+      let prevPos = 0;
+      let prevLine = 0;
       for (const n of Array.from(nodes)) {
         const l = Number(n.getAttribute("data-source-line") ?? "0");
+        const pos = nodePos(n, scroller);
         if (l > line) {
-          if (!prev) { scroller.scrollTop = n.offsetTop; return; }
-          const prevLine = Number(prev.getAttribute("data-source-line") ?? "0");
           const lineSpan = l - prevLine;
-          if (lineSpan <= 0) { scroller.scrollTop = prev.offsetTop; return; }
-          const frac = (line - prevLine) / lineSpan;
-          scroller.scrollTop = prev.offsetTop + frac * (n.offsetTop - prev.offsetTop);
+          const target = lineSpan <= 0
+            ? prevPos
+            : prevPos + ((line - prevLine) / lineSpan) * (pos - prevPos);
+          scroller.scrollTop = target - offsetFromTop;
           return;
         }
-        prev = n;
+        prevPos = pos;
+        prevLine = l;
       }
-      if (prev) scroller.scrollTop = prev.offsetTop;
+      scroller.scrollTop = prevPos - offsetFromTop;
     },
     isSourceLineVisible(line: number): boolean {
       const scroller = el.parentElement ?? el;
@@ -141,8 +150,8 @@ export function createPreview(el: HTMLElement): Preview {
         else { next = n; break; }
       }
       if (!prev) return false;
-      const blockTop = prev.offsetTop;
-      const blockBottom = next ? next.offsetTop : prev.offsetTop + prev.offsetHeight;
+      const blockTop = nodePos(prev, scroller);
+      const blockBottom = next ? nodePos(next, scroller) : blockTop + prev.offsetHeight;
       return blockBottom > top && blockTop < bottom;
     },
   };
