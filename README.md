@@ -84,6 +84,19 @@ madame/
 
 Madame is deliberately shipped as a single standalone binary — no installers. The raw executable (or on macOS, a single `.app` bundle) goes anywhere you want it, and config/state files sit next to it. Installer outputs (`.msi`, `.nsis`, `.dmg`, `.deb`, `.rpm`, `.appimage`) are disabled in `src-tauri/tauri.conf.json`.
 
+## Install
+
+Prebuilt binaries for tagged releases are on the [Releases page](https://github.com/shanehollon/madame/releases): a Windows `.zip`, a Linux `.tar.gz`, and a macOS `.zip` (Apple Silicon).
+
+Linux users on Nix/NixOS can run or install directly from the flake:
+
+```bash
+nix run github:shanehollon/madame                   # one-shot
+nix profile install github:shanehollon/madame       # add to user profile
+```
+
+The flake fetches the prebuilt Linux tarball from the matching GitHub Release, so no source build is required.
+
 ## Build
 
 ### Prerequisites
@@ -102,6 +115,12 @@ sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
   libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev pkg-config
 ```
 Other distros: see [Tauri 2 Linux prerequisites](https://tauri.app/start/prerequisites/#linux).
+
+**Linux (Nix)**
+```bash
+nix develop github:shanehollon/madame   # drops you in a Tauri-capable shell
+```
+Then `cd src-tauri && cargo tauri build` from inside the shell.
 
 ### Commands
 
