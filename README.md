@@ -2,18 +2,17 @@
 
 <img src="src/public/madame_logo.png" alt="Madame" width="80" />
 
-A minimal two-pane Markdown editor/viewer. Left (or right) is a plain textarea; the other side is a live-rendered preview with syntax-highlighted code and scroll sync. Built as a Tauri 2 desktop app with a TypeScript/Vite frontend and a small Rust backend.
+A minimal two-pane Markdown editor/viewer. Right (or left) is a plain text with readability highlighting; the other side is a full live-rendered Markdown preview.
 
 ## Features
 
-- Side-by-side editor and live preview with configurable sides (YAML).
-- Scroll sync with proportional interpolation between block anchors plus cursor-aware tracking — as you type, the block you're editing stays visible in the preview.
-- Syntax highlighting via highlight.js, GitHub-style rendering, task lists, header anchors.
+- Fast side-by-side editor and live preview.
+- Scroll sync plus cursor-aware tracking.
+- Syntax highlighting, GitHub-style rendering, task lists, header anchors.
 - Open/save via native dialogs, drag-and-drop, CLI arg, and an MRU "recent files" picker.
 - External file-change detection — prompts to reload if the file changes on disk.
-- Custom titlebar with window controls and the app logo.
-- Portable: config (`madame_config.yaml`) and state (`editor_state.json`) live next to the binary, so each copy of `madame.exe` is a self-contained instance.
-- Persistent window size/position, splitter ratio, and view mode.
+- Portable: config (`madame_config.yaml`) and state (`editor_state.json`) live next to the binary (generated on first run), so each copy of `madame.exe` is a self-contained instance.
+- Persistent window size/position, splitter ratio, hot keys and view mode.
 
 ## File structure
 
@@ -26,8 +25,6 @@ madame/
 ├── tsconfig.json
 ├── vite.config.ts
 ├── vitest.config.ts
-├── docs/
-│   └── plans/                # design + implementation plans
 ├── src/                      # Vite root — TS frontend
 │   ├── index.html
 │   ├── main.ts               # boot + orchestration
@@ -129,7 +126,7 @@ Output lands under `src-tauri/target/release/`:
 
 On first run, `madame_config.yaml` and `editor_state.json` are created next to the binary (or inside `Madame.app/Contents/MacOS/` on macOS) — so every copy is its own independent instance.
 
-> **Note:** because state lives next to the binary, don't put `madame.exe` in a write-protected location (e.g. `C:\Program Files\`). The state write will fail with `Access is denied` and file-open will surface that error. Drop it under `%LOCALAPPDATA%`, your home directory, or any user-writable folder.
+> **Note:** because state lives next to the binary, don't put `madame.exe` in a write-protected location (e.g. `C:\Program Files\`). The first-run state write will fail with `Access is denied`.
 
 ### Regenerate app icons
 
@@ -151,15 +148,38 @@ rm -rf src-tauri/icons/android src-tauri/icons/ios
 rm -f src-tauri/icons/Square*Logo.png src-tauri/icons/StoreLogo.png
 ```
 
+## Releasing
+
+Tagged builds are produced by the `Release` GitHub Actions workflow (`.github/workflows/release.yml`). On every `v*` tag push it builds for Windows (x86_64), Linux (x86_64), and macOS (aarch64 / Apple Silicon), then publishes a GitHub Release with three artifacts:
+
+- `madame-<version>-x86_64-windows.zip` — extracts to `madame.exe`.
+- `madame-<version>-x86_64-linux.tar.gz` — extracts to `madame/madame` plus a `madame/icons/` set (multiple PNG sizes for hicolor).
+- `madame-<version>-aarch64-darwin.zip` — extracts to `Madame.app`.
+
+To cut a release:
+
+1. Bump `"version"` in `src-tauri/tauri.conf.json` (e.g. `0.2.0`) and commit.
+2. Push `main`.
+3. Tag and push: `git tag v0.2.0 && git push origin v0.2.0`.
+
+The workflow's first job validates that the tag — with the leading `v` stripped — equals the `version` field in `src-tauri/tauri.conf.json`. If they disagree, the workflow fails fast and no build minutes are spent.
+
+> **Drift note:** only `tauri.conf.json` is validated. `package.json` and `Cargo.toml` versions are not cross-checked, but bump them in the same commit for consistency.
+
 ## Configuration
 
 First run creates `madame_config.yaml` next to the binary. Notable keys:
 
-- `ui.editor_position` — `"left"` or `"right"` (default: `right`).
+- `ui.editor_position` — `left|right` (default: `right`).
 - `preview.debounce_ms` — live-preview render debounce.
 - `preview.scroll_sync` — toggle scroll sync.
-- `editor.word_wrap`, `editor.tab_size`, `editor.tab_inserts_spaces`, `editor.font_size`, `editor.font_family`.
-- `keybindings.*` — rebindable shortcuts (open, save, save_as, recent_files, toggle_editor_only, toggle_preview_only).
+- `editor`
+  - `word_wrap`
+  - `tab_size`
+  - `tab_inserts_spaces`
+  - `font_size`
+  - `font_family`
+- `keybindings.*` — See table below.
 
 ## Keyboard shortcuts (defaults)
 
