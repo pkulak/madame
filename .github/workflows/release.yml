@@ -118,3 +118,39 @@ jobs:
           name: linux
           path: madame-${{ env.VERSION }}-x86_64-linux.tar.gz
           if-no-files-found: error
+
+  build-macos:
+    needs: validate-version
+    runs-on: macos-latest
+    env:
+      VERSION: ${{ needs.validate-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Install frontend deps
+        run: bun install --frozen-lockfile
+
+      - name: Build (.app bundle)
+        run: bun tauri build --bundles app
+
+      - name: Zip the .app
+        run: |
+          cd src-tauri/target/release/bundle/macos
+          zip -r "madame-${VERSION}-aarch64-darwin.zip" Madame.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: src-tauri/target/release/bundle/macos/madame-${{ env.VERSION }}-aarch64-darwin.zip
+          if-no-files-found: error
