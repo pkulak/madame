@@ -7,24 +7,28 @@ The Vite-built TS frontend: editor textarea, markdown-it preview, scroll sync, a
 ```
 src/
 ├── index.html
-├── main.ts               # boot + orchestration
-├── editor.ts             # textarea wrapper (line math, cursor tracking)
-├── preview.ts            # markdown-it renderer + source-line anchors
-├── scroll-sync.ts        # editor↔preview sync (interpolated + cursor-aware)
-├── splitter.ts           # draggable column splitter
-├── titlebar.ts           # custom titlebar + window controls
-├── shortcuts.ts          # keybinding registry
-├── recent.ts             # recent-files modal
-├── confirm.ts            # confirm dialog
-├── toast.ts              # toast helper
-├── ipc.ts                # typed wrapper over Tauri invoke/events
-├── types.ts              # shared TS types (mirror Rust structs)
+├── main.ts                          # boot + orchestration
+├── editor.ts                        # textarea wrapper (line math, cursor tracking)
+├── preview.ts                       # markdown-it renderer + source-line anchors
+├── highlight.ts                     # editor readability/syntax highlighter
+├── scroll-sync.ts                   # editor↔preview sync (interpolated + cursor-aware)
+├── splitter.ts                      # draggable column splitter
+├── titlebar.ts                      # custom titlebar + window controls
+├── shortcuts.ts                     # keybinding registry
+├── recent.ts                        # recent-files modal
+├── confirm.ts                       # confirm dialog
+├── toast.ts                         # toast helper
+├── ipc.ts                           # typed wrapper over Tauri invoke/events
+├── types.ts                         # shared TS types (mirror Rust structs)
+├── markdown-it-task-lists.d.ts      # local types for the task-list plugin
 ├── public/
-│   └── madame_logo.png   # app logo (source for icons + titlebar asset)
+│   ├── madame_logo.png              # app logo (titlebar asset + source for madame_icon.png)
+│   ├── madame_icon.png              # squircle-composited icon (source for platform icons)
+│   └── madame_screenshot.png        # README hero shot
 ├── styles/
 │   ├── app.css
-│   └── github.css        # github-markdown-css
-└── tests/                # vitest specs
+│   └── markdown.css                 # GitHub-style markdown body styling
+└── tests/                           # vitest specs
 ```
 
 ## Dependencies
