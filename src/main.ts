@@ -1,4 +1,4 @@
-import "./styles/github.css";
+import "./styles/markdown.css";
 import "./styles/app.css";
 import githubLightCss from "highlight.js/styles/github.css?inline";
 import githubDarkCss from "highlight.js/styles/github-dark.css?inline";
