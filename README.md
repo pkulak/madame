@@ -1,11 +1,10 @@
-# Madame
-
 <img src="src/public/madame_logo.png" alt="Madame" width="80" />
+
+# Madame
 
 A minimal two-pane Markdown editor/viewer. One side is plain text with readability highlighting; the other is a full live-rendered Markdown preview.
 
-<!-- TODO: replace with screenshot of Madame rendering this README. Save to src/public/madame_screenshot.png and uncomment the line below. -->
-<!-- <img src="src/public/madame_screenshot.png" alt="Madame editor screenshot" /> -->
+<img src="src/public/madame_screenshot.png" alt="Madame editor screenshot" width="300" />
 
 ## Features
 
