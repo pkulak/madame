@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "icon": "bun run scripts/generate-icon.ts && bun run tauri icon src/public/madame_icon.png"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

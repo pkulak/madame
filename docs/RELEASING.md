@@ -24,16 +24,18 @@ The workflow's first job validates that the tag — with the leading `v` strippe
 
 Two source images live under `src/public/`:
 
-- `madame_logo.png` — transparent silhouette + M; used in-app for the titlebar (rendered inverted on the dark titlebar).
-- `madame_icon.png` — rounded-square white background with the logo composited on top; used as the source for all platform icons (Windows `.ico`, macOS `.icns`, Linux `.png`). Matches the macOS dock icon convention.
+- `madame_logo.png` — transparent silhouette + M. Edit this when changing the artwork; it's also used in-app for the titlebar (rendered inverted on the dark titlebar).
+- `madame_icon.png` — derived: `madame_logo.png` composited onto a rounded-square white background. Used as the source for all platform icons (Windows `.ico`, macOS `.icns`, Linux `.png`), matching the macOS dock icon convention. Don't hand-edit — regenerate it from `madame_logo.png`.
 
-If you change either, regenerate the icon set:
+After editing `madame_logo.png`, regenerate everything in one command:
 
 ```bash
-bun run tauri icon src/public/madame_icon.png
+bun run icon
 ```
 
-This refreshes everything under `src-tauri/icons/`. Tauri also emits Android/iOS and Microsoft Store assets — delete those if you don't ship to those platforms (we don't):
+This runs `scripts/generate-icon.ts` (composites the squircle background to refresh `madame_icon.png`), then invokes `tauri icon src/public/madame_icon.png` to refresh every platform variant under `src-tauri/icons/`.
+
+Tauri also emits Android/iOS and Microsoft Store assets that we don't ship — delete them after the regen:
 
 ```bash
 rm -rf src-tauri/icons/android src-tauri/icons/ios

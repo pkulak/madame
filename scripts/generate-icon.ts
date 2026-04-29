@@ -2,8 +2,8 @@ import sharp from "sharp";
 import { resolve } from "node:path";
 
 const ROOT = resolve(import.meta.dir, "..");
-const SOURCE = resolve(ROOT, "dist/madame_logo.png");
-const OUT = resolve(ROOT, "dist/madame_icon.png");
+const SOURCE = resolve(ROOT, "src/public/madame_logo.png");
+const OUT = resolve(ROOT, "src/public/madame_icon.png");
 
 const CANVAS = 1024;
 const SQUIRCLE = 824;
